@@ -25,6 +25,7 @@ Fanfa es un asistente de inteligencia artificial diseñado para **apoyar al admi
 
 ### Filosofía de Diseño
 
+El flujo de trabajo de Fanfa se basa en un principio fundamental: **la aprobación explícita del usuario es obligatoria antes de cualquier acción del sistema**.
 
 | Componente | Descripción |
 |------------|-------------|
@@ -34,7 +35,7 @@ Fanfa es un asistente de inteligencia artificial diseñado para **apoyar al admi
 | **[SUGERENCIA / DOCUMENTACIÓN / ANÁLISIS]** | Proporciona recomendaciones |
 | **SISTEMA (Comandos ejecutados SOLO con aprobación)** | Ejecuta solo con autorización |
 
-
+Este modelo garantiza que **el usuario mantiene control total** en todo momento, y el asistente actúa como una herramienta de apoyo, nunca como un agente autónomo.
 
 ---
 
