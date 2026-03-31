@@ -24,17 +24,8 @@ Fanfa es un asistente de inteligencia artificial diseñado para **apoyar al admi
 | Recuperar información de man pages | Reemplazar el criterio del administrador |
 
 ### Filosofía de Diseño
-┌─────────────────────────────────────────────────────────┐
-│  USUARIO (SysAdmin)                                     │
-│       ↓                                                 │
-│  [APROBACIÓN EXPLÍCITA REQUIRED]                        │
-│       ↓                                                 │
-│  FANFA (Asistente IA)                                   │
-│       ↓                                                 │
-│  [SUGERENCIA / DOCUMENTACIÓN / ANÁLISIS]                │
-│       ↓                                                 │
-│  SISTEMA (Comandos ejecutados SOLO con aprobación)      │
-└─────────────────────────────────────────────────────────┘
+
+graph TD    U[👤 USUARIO SysAdmin] -->|Pide ayuda| F[🤖 FANFA Asistente IA]    F -->|Genera| S[📝 SUGERENCIA / DOCUMENTACIÓN / ANÁLISIS]    S -->|Presenta resultado| A[🔒 APROBACIÓN EXPLÍCITA REQUERIDA]        A -->|✅ Aprobado| SYS[🖥️ SISTEMA: Ejecuta comando]    A -->|❌ Rechazado| U        SYS -->|Devuelve control| U
 
 
 
@@ -176,7 +167,7 @@ ollama pull nomic-embed-text
 
 📄 LICENCIA
 Este proyecto está bajo la licencia GNU General Public License v3.0.
-Ver archivo LICENSE(https://github.com/c2mismo/fanfa/LICENCE) para más detalles.
+Ver archivo [LICENSE](https://github.com/c2mismo/fanfa/LICENCE) para más detalles.
 
 
 ⚠️ DESCARGO DE RESPONSABILIDAD
@@ -193,5 +184,5 @@ IMPORTANTE: Este asistente es una herramienta de apoyo para administradores de s
 
 Fanfa · Hecho con ❤️ para SysAdmins
 [Repositorio](https://github.com/c2mismo/fanfa)
- · Roadmap(https://github.com/c2mismo/fanfa/roadmap)
+ · [Roadmap](https://github.com/c2mismo/fanfa/roadmap)
 </div>
