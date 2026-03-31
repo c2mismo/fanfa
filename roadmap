@@ -1,0 +1,497 @@
+
+
+
+
+================================================================================
+              ROADMAP: ASISTENTE IA PARA SYSADMIN CON OLLAMA
+              (Sin AgentForge ni OpenClaw)
+================================================================================
+NOTA DE CONTEXTO: Este agente actúa como asistente del administrador de sistemas
+(usted). No toma decisiones autónomas críticas, no ejecuta comandos sin aprobación,
+y su función es apoyar, documentar y sugerir — nunca reemplazar el criterio humano.
+================================================================================
+
+FASE 0: PREPARACIÓN DEL ENTORNO
+--------------------------------------------------------------------------------
+[0.1] Verificar requisitos del sistema
+      - Objetivo: Confirmar hardware compatible (RAM, CPU, disco)
+            OS: Arch Linux x86_64
+            Kernel: Linux zen (siempre actualizado al estable, filosofia arch)
+            firmware AMDGPU: linux-firmware-amdgpu 20260309-1
+            lsmod | grep amdgpu:
+                  amdgpu              17399808  71
+                  amdxcp                 12288  1 amdgpu
+                  i2c_algo_bit           24576  1 amdgpu
+                  drm_ttm_helper         20480  2 amdgpu
+                  ttm                   139264  2 amdgpu,drm_ttm_helper
+                  drm_exec               12288  1 amdgpu
+                  drm_panel_backlight_quirks    12288  1 amdgpu
+                  gpu_sched              73728  1 amdgpu
+                  drm_suballoc_helper    20480  1 amdgpu
+                  video                  81920  2 asus_wmi,amdgpu
+                  drm_buddy              32768  1 amdgpu
+                  drm_display_helper    311296  1 amdgpu
+                  cec                   110592  2 drm_display_helper,amdgpu
+            cat /proc/cmdline: No muestra nomodeset
+            /dev/kfd: existe y es accesible
+            ls /dev/dri/: by-path  card0  card1  renderD128  renderD129
+            groups $USER: $USER wheel audio disk render storage uucp video gamemode
+                  (sudo usermod -aG render,video $USER)
+            CPU: AMD Ryzen 5 9600X
+            GPU Discrete: AMD Radeon RX 9060 XT PCIe GEN 5@16x
+            GPU Discrete vRAM: DDR6 15.922 GiB
+            Memory: 5.97 GiB / 14.77 GiB (40%)
+            Swap: 463.64 MiB / 11.93 GiB (4%)
+            Disk (/mnt/DATOS): 294.54 GiB / 400.98 GiB (73%) - btrfs
+      - Problemas esperados: RAM insuficiente para modelos grandes
+            Modelo actualmente preferente: qwen2.5:14b  ~9GB   12GB  16GB  ⚠️ Ajustado
+
+[0.2] Crear directorio de proyecto
+      # Crear directorio padre (si no existe)
+      sudo mkdir -p /mnt/DATOS/Agentes
+
+      # Cambiar ownership a tu usuario (CRÍTICO)
+      sudo chown -R $USER:$USER /mnt/DATOS/Agentes
+
+      # Verificar que eres dueño
+      ls -la /mnt/DATOS/ | grep Agentes
+
+      # Crear estructura completa del proyecto
+      mkdir -p /mnt/DATOS/Agentes/fanfa/{core,memory,rag,tools,security,config,logs,data}
+
+      # Crear subdirectorios adicionales
+      mkdir -p /mnt/DATOS/Agentes/fanfa/data/{user_configs,backups}
+      mkdir -p /mnt/DATOS/Agentes/fanfa/tests
+
+      # Establecer permisos (solo tu usuario - más seguro)
+      chmod -R 700 /mnt/DATOS/Agentes/fanfa
+
+      # Verificar estructura
+      tree /mnt/DATOS/Agentes/fanfa -L 2
+        /mnt/DATOS/Agentes/fanfa
+        ├── config
+        ├── core
+        ├── data
+        │   ├── backups
+        │   └── user_configs
+        ├── logs
+        ├── memory
+        ├── rag
+        ├── security
+        ├── tests
+        └── tools
+
+[0.3] Crear entorno virtual Python
+      # Navegar al directorio del proyecto
+      cd /mnt/DATOS/Agentes/fanfa
+
+      # Verificar Python disponible
+      python --version
+            Python 3.14.3
+      which python
+            /usr/bin/python
+
+      # Crear entorno virtual
+      python -m venv .venv
+
+      # Activar entorno virtual
+      source .venv/bin/activate
+
+      # Verificar que está activo "dentro del venv"
+      which python
+      # Debería mostrar: /mnt/DATOS/Agentes/fanfa/.venv/bin/python
+
+      # Actualizar pip "dentro del venv"
+      pip install --upgrade pip
+
+      # Verificar versión
+      pip --version
+            pip 26.0.1 from /mnt/DATOS/Agentes/fanfa/.venv/lib/python3.14/site-packages/pip (python 3.14)
+
+      # Cerramos el entorno virtual de python
+      deactivate
+
+      # Creamos script de activación rápida, creando un alias en ~/.bashrc o ~/.zshrc:
+            echo 'alias fanfa-activate="source /mnt/DATOS/Agentes/fanfa/.venv/bin/activate"' >> ~/.bashrc
+source ~/.bashrc
+            # Ahora puedes usar: fanfa-activate
+
+
+[0.4] Configurar control de versiones (git)
+      cd /mnt/DATOS/Agentes/fanfa
+
+      # Inicializar repositorio githab, suponemos que el git ya está configurado
+      # Accedo al github como usuario
+      https://github.com/new
+      Nombre: fanfa
+      Decripción: Fanfa Asistente IA local para SysAdmin con Ollama
+      Visibilidad: Public
+      Add .gitignore: NO
+      Add licence: GNU GPL v3
+
+      #Clonamos:
+      git clone "Dierccion SSH para clonar"
+
+      # Crear .gitignore CRÍTICO
+      cp ruta/archivo/gitignore .gitignore
+
+      # Commit inicial
+      git add .
+      git commit -m "Initial commit: Project structure for Fanfa SysAdmin Assistant"
+      git status
+      git log --oneline
+
+
+FASE 1: INSTALACIÓN DE OLLAMA
+--------------------------------------------------------------------------------
+[1.1] Instalar Ollama (Linux)
+      - Objetivo: Motor de inferencia local funcionando
+      - Comando: curl -fsSL https://ollama.com/install.sh | sh
+      - Problemas esperados: Drivers GPU, permisos de instalación
+
+[1.2] Configurar Ollama para solo localhost
+      - Objetivo: Seguridad, sin exposición a red
+      - Archivo: /etc/systemd/system/ollama.service
+      - Variable: OLLAMA_HOST=127.0.0.1:11434
+      - Problemas esperados: Firewall, puertos bloqueados
+
+[1.3] Verificar instalación
+      - Objetivo: Confirmar que Ollama responde
+      - Comando: ollama --version
+      - Problemas esperados: Servicio no inicia
+
+[1.4] Descargar modelos base
+      - Objetivo: Tener LLM listo para usar
+      - Modelos: llama3.1 (8B), nomic-embed-text (embeddings)
+      - Comando: ollama pull llama3.1
+      - Problemas esperados: Descarga lenta, disco lleno
+
+
+FASE 2: ESTRUCTURA DEL PROYECTO
+--------------------------------------------------------------------------------
+[2.1] Crear árbol de directorios
+      - Objetivo: Organización del código
+      - Estructura:
+        /agent
+        ├── /core          (lógica principal del asistente)
+        ├── /memory        (gestión de memoria)
+        ├── /rag           (recuperación de conocimiento)
+        ├── /tools         (herramientas/skills)
+        ├── /security      (permisos y validación)
+        ├── /config        (configuraciones)
+        ├── /logs          (registros de actividad)
+        └── /data          (memoria persistente)
+
+[2.2] Crear archivo de requisitos
+      - Objetivo: Documentar dependencias Python
+      - Archivo: requirements.txt
+      - Problemas esperados: Conflictos de versiones
+
+[2.3] Crear archivo de configuración base
+      - Objetivo: Centralizar variables (paths, modelos, permisos)
+      - Archivo: config.yaml o .env
+      - Problemas esperados: Variables de entorno no cargan
+
+
+FASE 3: CAPA DE MEMORIA PERSISTENTE
+--------------------------------------------------------------------------------
+[3.1] Instalar SQLite
+      - Objetivo: Base de datos ligera y local
+      - Comando: pip install sqlite3 (incluido en Python)
+      - Problemas esperados: Bloqueos de archivo
+
+[3.2] Diseñar esquema de base de datos
+      - Objetivo: Estructura para historial, estado, preferencias
+      - Tablas: command_history, system_state, user_preferences
+      - Problemas esperados: Migraciones futuras
+
+[3.3] Implementar clase PersistentMemory
+      - Objetivo: CRUD de memoria (crear, leer, actualizar, borrar)
+      - Archivo: /memory/persistent_memory.py
+      - Problemas esperados: Concurrencia, corrupción de datos
+
+[3.4] Implementar cifrado de memoria (opcional)
+      - Objetivo: Proteger datos sensibles
+      - Librería: cryptography o sqlcipher
+      - Problemas esperados: Gestión de claves
+
+[3.5] Crear sistema de resúmenes automáticos
+      - Objetivo: LLM genera resumen después de cada acción
+      - Archivo: /memory/summarizer.py
+      - Problemas esperados: Resúmenes pierden información crítica
+
+
+FASE 4: CAPA RAG (RECUPERACIÓN DE CONOCIMIENTO)
+--------------------------------------------------------------------------------
+[4.1] Instalar vector database local
+      - Objetivo: Almacenar embeddings de documentos
+      - Opciones: ChromaDB o Qdrant (local)
+      - Comando: pip install chromadb
+      - Problemas esperados: Consumo de RAM alto
+
+[4.2] Configurar modelo de embeddings
+      - Objetivo: Convertir texto a vectores
+      - Modelo: nomic-embed-text (via Ollama)
+      - Problemas esperados: Calidad de embeddings
+
+[4.3] Crear pipeline de ingestión de documentos
+      - Objetivo: Indexar documentación (man pages, docs, configs)
+      - Archivo: /rag/document_ingestor.py
+      - Problemas esperados: Formatos de archivo variados
+
+[4.4] Implementar sistema de búsqueda semántica
+      - Objetivo: Recuperar información relevante
+      - Archivo: /rag/retriever.py
+      - Problemas esperados: Resultados no relevantes
+
+[4.5] Crear caché de consultas frecuentes
+      - Objetivo: Mejorar velocidad de respuesta
+      - Archivo: /rag/query_cache.py
+      - Problemas esperados: Caché desactualizada
+
+
+FASE 5: CAPA DE HERRAMIENTAS (TOOLS)
+--------------------------------------------------------------------------------
+[5.1] Definir lista de comandos permitidos
+      - Objetivo: Whitelist de seguridad
+      - Archivo: /security/allowed_commands.py
+      - Problemas esperados: Comandos faltantes
+
+[5.2] Crear sistema de niveles de permiso
+      - Objetivo: READ_ONLY, WRITE, ADMIN
+      - Archivo: /security/permission_levels.py
+      - Problemas esperados: Escalada accidental
+
+[5.3] Implementar validador de comandos
+      - Objetivo: Rechazar comandos peligrosos
+      - Archivo: /security/command_validator.py
+      - Problemas esperados: Falsos positivos/negativos
+
+[5.4] Crear wrappers para comandos comunes
+      - Objetivo: Ejecución segura y con logging
+      - Archivo: /tools/command_executor.py
+      - Problemas esperados: Timeouts, salidas grandes
+
+[5.5] Implementar lector de archivos de configuración
+      - Objetivo: Analizar /etc/* sin modificar
+      - Archivo: /tools/config_reader.py
+      - Problemas esperados: Permisos de lectura
+
+
+FASE 6: CAPA DE ORQUESTACIÓN (AGENTE PRINCIPAL)
+--------------------------------------------------------------------------------
+[6.1] Instalar LangChain (opcional) o crear orquestador custom
+      - Objetivo: Gestionar flujo del asistente
+      - Comando: pip install langchain langchain-community
+      - Problemas esperados: Cambios de API, dependencias
+
+[6.2] Definir prompt del sistema
+      - Objetivo: Instrucciones claras de comportamiento como asistente
+      - Archivo: /config/system_prompt.txt
+      - Problemas esperados: Prompt injection, ambigüedad
+
+[6.3] Implementar ciclo principal del asistente
+      - Objetivo: Memoria -> Análisis -> Sugerencia -> Aprobación humana
+      - Archivo: /core/agent_loop.py
+      - Problemas esperados: Bucles infinitos, decisiones erróneas
+
+[6.4] Integrar Ollama con el orquestador
+      - Objetivo: Comunicación con el LLM
+      - Archivo: /core/llm_interface.py
+      - Problemas esperados: Timeouts, errores de conexión
+
+[6.5] Implementar manejo de errores y reintentos
+      - Objetivo: Resiliencia ante fallos
+      - Archivo: /core/error_handler.py
+      - Problemas esperados: Errores no contemplados
+
+
+FASE 7: HUMAN-IN-THE-LOOP (APROBACIÓN)
+--------------------------------------------------------------------------------
+[7.1] Diseñar interfaz de aprobación
+      - Objetivo: Usuario ve sugerencia antes de ejecutar
+      - Opciones: CLI interactiva, TUI, o web simple
+      - Archivo: /ui/approval_interface.py
+      - Problemas esperados: UX confusa
+
+[7.2] Implementar sistema de confirmación
+      - Objetivo: Require "yes" explícito para ejecutar
+      - Archivo: /security/approval_system.py
+      - Problemas esperados: Bypass accidental
+
+[7.3] Crear sistema de veto/aborto
+      - Objetivo: Usuario puede cancelar en cualquier momento
+      - Archivo: /ui/emergency_stop.py
+      - Problemas esperados: Señales no capturadas
+
+[7.4] Implementar logging de aprobaciones
+      - Objetivo: Auditoría de quién aprobó qué
+      - Archivo: /logs/approval_log.py
+      - Problemas esperados: Logs muy grandes
+
+
+FASE 8: SISTEMA DE LOGGING Y OBSERVABILIDAD
+--------------------------------------------------------------------------------
+[8.1] Configurar logging estructurado
+      - Objetivo: Todos los eventos registrados
+      - Archivo: /config/logging_config.py
+      - Problemas esperados: Performance impact
+
+[8.2] Crear dashboard de actividad (opcional)
+      - Objetivo: Visualizar acciones en tiempo real
+      - Archivo: /ui/activity_dashboard.py
+      - Problemas esperados: Complejidad de implementación
+
+[8.3] Implementar rotación de logs
+      - Objetivo: Evitar disco lleno
+      - Librería: logging.handlers.RotatingFileHandler
+      - Problemas esperados: Logs perdidos en rotación
+
+[8.4] Crear sistema de alertas
+      - Objetivo: Notificar acciones críticas
+      - Archivo: /security/alert_system.py
+      - Problemas esperados: Falsas alarmas
+
+
+FASE 9: DOCUMENTACIÓN DEL SISTEMA
+--------------------------------------------------------------------------------
+[9.1] Indexar man pages locales
+      - Objetivo: RAG accede a documentación del sistema
+      - Comando: python /rag/document_ingestor.py --source man
+      - Problemas esperados: Volumen grande de datos
+
+[9.2] Indexar documentación online (offline primero)
+      - Objetivo: Conocimiento de distribuciones específicas
+      - Archivo: /rag/online_docs_downloader.py
+      - Problemas esperados: Cambios en estructura web
+
+[9.3] Crear base de conocimiento de configuraciones
+      - Objetivo: Recordar configs específicas del usuario
+      - Archivo: /data/user_configs/
+      - Problemas esperados: Sensibilidad de datos
+
+
+FASE 10: PRUEBAS Y VALIDACIÓN
+--------------------------------------------------------------------------------
+[10.1] Crear suite de pruebas unitarias
+       - Objetivo: Verificar cada componente aislado
+       - Archivo: /tests/unit_tests.py
+       - Problemas esperados: Mocks complejos
+
+[10.2] Crear pruebas de integración
+       - Objetivo: Verificar flujo completo
+       - Archivo: /tests/integration_tests.py
+       - Problemas esperados: Estado compartido
+
+[10.3] Pruebas de seguridad (pentesting básico)
+       - Objetivo: Intentar bypass de permisos
+       - Archivo: /tests/security_tests.py
+       - Problemas esperados: Vulnerabilidades encontradas
+
+[10.4] Pruebas de estrés y carga
+       - Objetivo: Verificar estabilidad prolongada
+       - Archivo: /tests/stress_tests.py
+       - Problemas esperados: Fugas de memoria
+
+
+FASE 11: DESPLIEGUE Y PRODUCCIÓN
+--------------------------------------------------------------------------------
+[11.1] Crear script de inicio del asistente
+       - Objetivo: Lanzar todos los componentes
+       - Archivo: /scripts/start_agent.sh
+       - Problemas esperados: Orden de inicio incorrecto
+
+[11.2] Configurar como servicio del sistema (systemd)
+       - Objetivo: Inicio automático, gestión de ciclo de vida
+       - Archivo: /etc/systemd/system/sysadmin-assistant.service
+       - Problemas esperados: Permisos, variables de entorno
+
+[11.3] Crear backup de memoria y configuración
+       - Objetivo: Recuperación ante fallos
+       - Archivo: /scripts/backup_memory.sh
+       - Problemas esperados: Backup incompleto
+
+[11.4] Documentar procedimiento de recuperación
+       - Objetivo: Saber cómo restaurar el asistente
+       - Archivo: /docs/recovery_procedure.md
+       - Problemas esperados: Documentación desactualizada
+
+
+FASE 12: MANTENIMIENTO Y MEJORA CONTINUA
+--------------------------------------------------------------------------------
+[12.1] Revisar logs semanalmente
+       - Objetivo: Detectar patrones problemáticos
+       - Problemas esperados: Volumen de logs
+
+[12.2] Actualizar modelos periódicamente
+       - Objetivo: Mejorar calidad de respuestas
+       - Comando: ollama pull llama3.1 (nueva versión)
+       - Problemas esperados: Cambios de comportamiento
+
+[12.3] Expandir whitelist de comandos gradualmente
+       - Objetivo: Más capacidades con seguridad
+       - Archivo: /security/allowed_commands.py
+       - Problemas esperados: Nuevos vectores de ataque
+
+[12.4] Refinar prompts basado en uso real
+       - Objetivo: Mejorar precisión del asistente
+       - Archivo: /config/system_prompt.txt
+       - Problemas esperados: Regresiones en comportamiento
+
+
+================================================================================
+                         CHECKLIST DE SEGURIDAD CRÍTICA
+================================================================================
+
+[ ] Ollama solo escucha en 127.0.0.1 (nunca 0.0.0.0)
+[ ] Asistente corre como usuario sin privilegios (nunca root)
+[ ] Todos los comandos requieren aprobación explícita del admin (tú)
+[ ] No hay ejecución autónoma de writes/admin
+[ ] Memoria cifrada si contiene datos sensibles
+[ ] Logs de todas las acciones (aprobadas y rechazadas)
+[ ] Sistema de aborto de emergencia implementado
+[ ] Backup regular de memoria y configuración
+[ ] Firewall bloquea puertos innecesarios
+[ ] Revisión periódica de allowed_commands
+
+
+================================================================================
+                         ORDEN RECOMENDADO DE IMPLEMENTACIÓN
+================================================================================
+
+Semana 1:  Fases 0, 1, 2 (Entorno + Ollama + Estructura)
+Semana 2:  Fases 3, 5 (Memoria + Herramientas básicas)
+Semana 3:  Fases 6, 7 (Orquestación + Human-in-the-loop)
+Semana 4:  Fases 4, 8 (RAG + Logging)
+Semana 5:  Fases 9, 10 (Documentación + Pruebas)
+Semana 6:  Fases 11, 12 (Despliegue + Mantenimiento)
+
+
+================================================================================
+                              NOTAS IMPORTANTES
+================================================================================
+
+- Cada fase puede tomar más tiempo del estimado
+- Priorizar seguridad sobre funcionalidad
+- Testear cada componente antes de integrar
+- Mantener backup del estado antes de cambios grandes
+- Documentar problemas encontrados y soluciones
+- No saltar fases de seguridad (5, 7, 8)
+- RECORDATORIO: Tú eres el administrador. El asistente sugiere, tú decides.
+
+================================================================================
+
+
+
+
+
+
+
+Pendientes:
+
+0.1: rocminfo
+
+
+
+
+
