@@ -1,0 +1,55 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Datos sensibles y memoria
+/data/
+/logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuraciones con secrets
+.env
+*.env
+config.local.yaml
+*.key
+*.pem
+
+# Archivos grandes de modelos
+*.gguf
+*.bin
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
