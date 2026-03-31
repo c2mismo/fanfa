@@ -117,21 +117,33 @@ La **FASE 0** ha completado exitosamente la preparación del entorno de desarrol
 
 ## 📁 ESTRUCTURA DEL PROYECTO
 
-/mnt/DATOS/Agentes/fanfa/
-├── .git/                    # Repositorio Git
-├── .venv/                   # Entorno virtual Python
-├── LICENSE                  # Licencia GNU GPL v3
-├── README.md                # Este archivo
-├── core/                    # Lógica principal
-├── memory/                  # Memoria persistente
-├── rag/                     # Recuperación de conocimiento
-├── tools/                   # Herramientas
-├── security/                # Permisos y validación
-├── config/                  # Configuraciones
-├── logs/                    # Registros (excluido de git)
-├── data/                    # Datos persistentes (excluido de git)
-└── tests/                   # Pruebas
+La estructura del proyecto está organizada de forma modular para facilitar el mantenimiento y la escalabilidad:
 
+| Ruta | Descripción |
+|------|-------------|
+| `.git/` | Repositorio Git |
+| `.venv/` | Entorno virtual Python |
+| `LICENSE` | Licencia GNU GPL v3 |
+| `README.md` | Este archivo |
+| `core/` | Lógica principal |
+| `memory/` | Memoria persistente |
+| `rag/` | Recuperación de conocimiento |
+| `tools/` | Herramientas |
+| `security/` | Permisos y validación |
+| `config/` | Configuraciones |
+| `logs/` | Registros (excluido de git) |
+| `data/` | Datos persistentes (excluido de git) |
+| `tests/` | Pruebas |
+
+
+### Descripción de directorios principales
+
+- **`core/`**: Contiene la lógica central del asistente y orquestación
+- **`memory/`**: Gestión de memoria persistente y contexto del usuario
+- **`rag/`**: Implementación de Retrieval-Augmented Generation para conocimiento
+- **`tools/`**: Herramientas y utilidades disponibles para el asistente
+- **`security/`**: Validación de permisos y control de acceso
+- **`config/`**: Archivos de configuración y variables de entorno
 
 ---
 
