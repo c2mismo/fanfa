@@ -146,8 +146,49 @@ FASE 1: INSTALACIÓN DE OLLAMA
 --------------------------------------------------------------------------------
 [1.1] Instalar Ollama (Linux)
       - Objetivo: Motor de inferencia local funcionando
-      - Comando: curl -fsSL https://ollama.com/install.sh | sh
-      - Problemas esperados: Drivers GPU, permisos de instalación
+      - Comando: sudo pacman -S ollama-rocm rocm-smi-lib
+      # El paquete ollama-rocm ya incluye las dependencias ROCm necesarias
+
+      rocm-core 7.2.0-2
+      rocminfo | grep -E "Name:.*gfx|Marketing Name"
+      Marketing Name:          AMD Ryzen 5 9600X 6-Core Processor
+      Name:                    gfx1200
+
+      Configurar variable para RX 9000 series:
+      # Crear archivo de entorno para Ollama
+      sudo mkdir -p /etc/ollama
+      sudo nano /etc/ollama/ollama.env
+
+      # Agregar estas líneas:
+      OLLAMA_HOST=127.0.0.1:11434
+
+      # Compruebo el ID "entre corchetes" de la GPU discreta
+      rocm-smi --showid
+
+      sudo nano /etc/systemd/system/ollama.service.d/override.conf
+      # Agregar estas líneas HIP_VISIBLE_DEVICES=Nº de Node:
+      [Service]
+      Type=notify
+      ExecStart=/usr/bin/ollama serve
+      EnvironmentFile=/etc/ollama/ollama.env
+      Environment="HSA_OVERRIDE_GFX_VERSION=12.0.1"
+      Environment="HIP_VISIBLE_DEVICES=0"
+
+      # Recargar daemon de systemd
+      sudo systemctl daemon-reload
+      sudo systemctl restart ollama
+
+      # GPU detectada (sin crash)
+      sudo journalctl -u ollama -n 10 --no-pager | grep "inference compute"
+
+
+
+
+
+
+
+
+
 
 [1.2] Configurar Ollama para solo localhost
       - Objetivo: Seguridad, sin exposición a red
@@ -481,15 +522,6 @@ Semana 6:  Fases 11, 12 (Despliegue + Mantenimiento)
 
 ================================================================================
 
-
-
-
-
-
-
-Pendientes:
-
-0.1: rocminfo
 
 
 
