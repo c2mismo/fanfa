@@ -197,7 +197,7 @@ ollama pull nomic-embed-text
 
 📄 LICENCIA
 Este proyecto está bajo la licencia GNU General Public License v3.0.
-Ver archivo [LICENSE](https://github.com/c2mismo/fanfa/LICENCE) para más detalles.
+Ver archivo [LICENSE](https://github.com/c2mismo/fanfa/blob/main/LICENSE) para más detalles.
 
 
 ⚠️ DESCARGO DE RESPONSABILIDAD
@@ -214,5 +214,5 @@ IMPORTANTE: Este asistente es una herramienta de apoyo para administradores de s
 
 Fanfa · Hecho con ❤️ para SysAdmins
 [Repositorio](https://github.com/c2mismo/fanfa)
- · [Roadmap](https://github.com/c2mismo/fanfa/roadmap)
+ · [Roadmap](https://github.com/c2mismo/fanfa/blob/main/roadmap)
 </div>
