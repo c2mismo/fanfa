@@ -25,7 +25,14 @@ Fanfa es un asistente de inteligencia artificial diseñado para **apoyar al admi
 
 ### Filosofía de Diseño
 
-graph TD    U[👤 USUARIO SysAdmin] -->|Pide ayuda| F[🤖 FANFA Asistente IA]    F -->|Genera| S[📝 SUGERENCIA / DOCUMENTACIÓN / ANÁLISIS]    S -->|Presenta resultado| A[🔒 APROBACIÓN EXPLÍCITA REQUERIDA]        A -->|✅ Aprobado| SYS[🖥️ SISTEMA: Ejecuta comando]    A -->|❌ Rechazado| U        SYS -->|Devuelve control| U
+
+| Componente | Descripción |
+|------------|-------------|
+| **USUARIO (SysAdmin)** | Inicia la solicitud |
+| **[APROBACIÓN EXPLÍCITA REQUIRED]** | Validación obligatoria del usuario |
+| **FANFA (Asistente IA)** | Procesa y sugiere acciones |
+| **[SUGERENCIA / DOCUMENTACIÓN / ANÁLISIS]** | Proporciona recomendaciones |
+| **SISTEMA (Comandos ejecutados SOLO con aprobación)** | Ejecuta solo con autorización |
 
 
 
