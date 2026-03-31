@@ -160,16 +160,16 @@ La estructura del proyecto está organizada de forma modular para facilitar el m
 
 ### Checklist de Seguridad
 
-[ ] Ollama solo escucha en 127.0.0.1
-[ ] Asistente corre como usuario sin privilegios
-[ ] Todos los comandos requieren aprobación explícita
-[ ] No hay ejecución autónoma de writes/admin
-[ ] Memoria cifrada si contiene datos sensibles
-[ ] Logs de todas las acciones (aprobadas y rechazadas)
-[ ] Sistema de aborto de emergencia implementado
-[ ] Backup regular de memoria y configuración
-[ ] Firewall bloquea puertos innecesarios
-[ ] Revisión periódica de allowed_commands
+- [ ] Ollama solo escucha en 127.0.0.1
+- [ ] Asistente corre como usuario sin privilegios
+- [ ] Todos los comandos requieren aprobación explícita
+- [ ] No hay ejecución autónoma de writes/admin
+- [ ] Memoria cifrada si contiene datos sensibles
+- [ ] Logs de todas las acciones (aprobadas y rechazadas)
+- [ ] Sistema de aborto de emergencia implementado
+- [ ] Backup regular de memoria y configuración
+- [ ] Firewall bloquea puertos innecesarios
+- [ ] Revisión periódica de allowed_commands
 
 
 ---
