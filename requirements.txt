@@ -1,0 +1,52 @@
+# ==========================================
+# FANFA - Dependencies for SysAdmin AI Assistant
+# Python 3.14+ | Arch Linux | AMD ROCm | Ollama
+# ==========================================
+
+# === CORE: Comunicación con Ollama ===
+ollama>=0.4.0,<0.5.0          # Cliente oficial de Ollama
+
+# === CONFIGURACIÓN ===
+pyyaml>=6.0.2                 # Para config.yaml
+python-dotenv>=1.0.1          # Para variables de entorno (.env)
+
+# === BASE DE DATOS ===
+# sqlite3 está incluido en Python, pero añadimos ORM para escalabilidad
+sqlalchemy>=2.0.25            # ORM para SQLite (opcional pero recomendado)
+aiosqlite>=0.20.0             # SQLite asíncrono (para futuro async)
+
+# === RAG: Vector Database y Embeddings ===
+chromadb>=0.4.22              # Vector DB local (más ligero que Qdrant para empezar)
+# NOTA: Usaremos Ollama para embeddings (nomic-embed-text), no transformers local
+
+# === UTILIDADES DE SISTEMA ===
+psutil>=5.9.8                 # Información de sistema (CPU, RAM, disco)
+shutilwhich>=1.1.0            # Verificación segura de comandos disponibles
+pathlib>=1.0.1                # Manejo moderno de rutas (ya en stdlib 3.4+, pero por claridad)
+
+# === LOGGING Y OBSERVABILIDAD ===
+# logging está en stdlib, pero structlog mejora la estructura
+structlog>=24.1.0             # Logging estructurado para mejor auditoría
+
+# === SEGURIDAD ===
+cryptography>=42.0.0          # Para cifrado de memoria sensible
+bcrypt>=4.1.2                 # Para hashing de claves si se necesita
+
+# === INTERFAZ DE USUARIO (CLI/TUI) ===
+rich>=13.7.0                  # CLI con colores y formato bonito
+textual>=0.48.0               # [Opcional] Para TUI avanzada en futuro
+
+# === TESTING ===
+pytest>=8.0.0                 # Framework de testing
+pytest-cov>=4.1.0             # Cobertura de tests
+pytest-asyncio>=0.23.5        # Para tests asíncronos
+
+# === UTILIDADES ADICIONALES ===
+tenacity>=8.2.3               # Reintentos con backoff exponencial (para resiliencia)
+pydantic>=2.6.0               # Validación de datos y configuración tipada
+
+# === NOTAS IMPORTANTES ===
+# 1. NO incluir torch/tensorflow: usamos Ollama para inferencia
+# 2. NO incluir transformers pesado: embeddings via Ollama API
+# 3. Todas las versiones son mínimas; ajustar tras testing en tu hardware
+# 4. Para AMD ROCm: las dependencias de GPU las maneja Ollama externamente
