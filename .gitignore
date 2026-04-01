@@ -31,7 +31,6 @@ wheels/
 
 # --- data/ ---
 # Mantener estructura de directorios, excluir contenido generado
-config/.env.example
 data/*
 !data/.gitkeep
 !data/vector_store/.gitkeep
@@ -72,6 +71,7 @@ logs/*.zip
 # Configuraciones con secrets
 .env
 *.env
+.env*
 config.local.yaml
 *.key
 *.pem
