@@ -25,12 +25,48 @@ wheels/
 .installed.cfg
 *.egg
 
-# Datos sensibles y memoria
-/data/
-/logs/
+# ===========================================
+# DATOS SENSIBLES Y MEMORIA (FANFA)
+# ===========================================
+
+# --- data/ ---
+# Mantener estructura de directorios, excluir contenido generado
+data/*
+!data/.gitkeep
+!data/vector_store/.gitkeep
+!data/user_configs/.gitkeep
+!data/backups/.gitkeep
+
+# Excluir archivos de base de datos y sus locks
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.sqlite
+data/*.sqlite3
+
+# Excluir contenido de subdirectorios (pero permitir .gitkeep)
+data/vector_store/*
+!data/vector_store/.gitkeep
+data/user_configs/*
+!data/user_configs/.gitkeep
+data/backups/*
+!data/backups/.gitkeep
+
+# --- logs/ ---
+# Mantener directorio, excluir archivos de log rotativos
+logs/*
+!logs/.gitkeep
+logs/*.log
+logs/*.log.*
+logs/*.gz
+logs/*.zip
+
+# --- Seguridad adicional (por si algún archivo se escapa) ---
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
 
 # Configuraciones con secrets
 .env
