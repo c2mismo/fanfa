@@ -31,6 +31,7 @@ wheels/
 
 # --- data/ ---
 # Mantener estructura de directorios, excluir contenido generado
+config/.env.example
 data/*
 !data/.gitkeep
 !data/vector_store/.gitkeep
