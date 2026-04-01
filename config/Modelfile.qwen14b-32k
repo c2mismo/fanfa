@@ -1,0 +1,6 @@
+FROM qwen2.5:14b
+# Contexto extendido a 32K tokens
+PARAMETER num_ctx 32768
+
+# Forzar offload completo a GPU (99 = todas las capas disponibles)
+PARAMETER num_gpu 99
