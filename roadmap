@@ -112,9 +112,8 @@ FASE 0: PREPARACIÓN DEL ENTORNO
       deactivate
 
       # Creamos script de activación rápida, creando un alias en ~/.bashrc o ~/.zshrc:
-            echo 'alias fanfa-activate="source /mnt/DATOS/Agentes/fanfa/.venv/bin/activate"' >> ~/.bashrc
-source ~/.bashrc
-            # Ahora puedes usar: fanfa-activate
+      alias fanfa-activate="source /mnt/DATOS/Agentes/fanfa/.venv/bin/activate"
+      # Ahora puedes usar: fanfa-activate
 
 
 [0.4] Configurar control de versiones (git)
@@ -154,6 +153,12 @@ FASE 1: INSTALACIÓN DE OLLAMA
       Marketing Name:          AMD Ryzen 5 9600X 6-Core Processor
       Name:                    gfx1200
 
+[1.2] Configurar Ollama para solo localhost
+      - Objetivo: Seguridad, sin exposición a red
+      - Archivo: /etc/systemd/system/ollama.service
+      - Variable: OLLAMA_HOST=127.0.0.1:11434
+      - Problemas esperados: Firewall, puertos bloqueados
+
       Configurar variable para RX 9000 series:
       # Crear archivo de entorno para Ollama
       sudo mkdir -p /etc/ollama
@@ -174,6 +179,11 @@ FASE 1: INSTALACIÓN DE OLLAMA
       Environment="HSA_OVERRIDE_GFX_VERSION=12.0.1"
       Environment="HIP_VISIBLE_DEVICES=0"
 
+[1.3] Verificar instalación
+      - Objetivo: Confirmar que Ollama responde
+      - Comando: ollama --version
+      - Problemas esperados: Servicio no inicia
+
       # Recargar daemon de systemd
       sudo systemctl daemon-reload
       sudo systemctl restart ollama
@@ -182,30 +192,180 @@ FASE 1: INSTALACIÓN DE OLLAMA
       sudo journalctl -u ollama -n 10 --no-pager | grep "inference compute"
 
 
-
-
-
-
-
-
-
-
-[1.2] Configurar Ollama para solo localhost
-      - Objetivo: Seguridad, sin exposición a red
-      - Archivo: /etc/systemd/system/ollama.service
-      - Variable: OLLAMA_HOST=127.0.0.1:11434
-      - Problemas esperados: Firewall, puertos bloqueados
-
-[1.3] Verificar instalación
-      - Objetivo: Confirmar que Ollama responde
-      - Comando: ollama --version
-      - Problemas esperados: Servicio no inicia
-
 [1.4] Descargar modelos base
       - Objetivo: Tener LLM listo para usar
-      - Modelos: llama3.1 (8B), nomic-embed-text (embeddings)
-      - Comando: ollama pull llama3.1
+      - Modelos: qwen2.5 (14B), nomic-embed-text (embeddings)
       - Problemas esperados: Descarga lenta, disco lleno
+      ollama pull qwen2.5:14b
+      ollama list
+
+
+[1.5] Verificar modelo base
+      - Objetivo: Comprobar su funcionamiento
+      ollama run qwen2.5:14b "Responde en una palabra: ¿funcionas?"
+      ollama run qwen2.5:14b << 'EOF'
+Eres un asistente de sysadmin en Arch Linux.
+Usuario: ¿Qué comando uso para ver el uso de disco en btrfs?
+Asistente:
+EOF
+
+      Script de Test Completo
+      nano /mnt/DATOS/Agentes/fanfa/tests/test_ollama_model.sh
+
+      <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<INICIO SCRIPT>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+#!/bin/bash
+# test_ollama_model.sh - Verificación de modelo qwen2.5:14b
+
+# Detectar si estamos en el venv del proyecto, si no, sugerir activación
+VENV_PATH="/mnt/DATOS/Agentes/fanfa/.venv/bin/activate"
+if [[ -z "$VIRTUAL_ENV" ]] && [[ -f "$VENV_PATH" ]]; then
+    echo "⚠️  Nota: Este script no requiere venv, pero para futuros tests con Python:"
+    echo "   Ejecuta: fanfa-activate"
+    echo ""
+fi
+
+MODEL="qwen2.5:14b"
+LOG_FILE="/mnt/DATOS/Agentes/fanfa/logs/ollama_test_$(date +%Y%m%d_%H%M%S).log"
+
+echo "========================================" | tee -a $LOG_FILE
+echo "TEST OLLAMA - $MODEL" | tee -a $LOG_FILE
+echo "Fecha: $(date)" | tee -a $LOG_FILE
+echo "========================================" | tee -a $LOG_FILE
+
+# 1. Verificar servicio Ollama
+echo -e "\n[1] Verificando servicio Ollama..." | tee -a $LOG_FILE
+if systemctl is-active --quiet ollama; then
+    echo "✅ Servicio Ollama activo" | tee -a $LOG_FILE
+else
+    echo "❌ Servicio Ollama INACTIVO" | tee -a $LOG_FILE
+    exit 1
+fi
+
+# 2. Verificar modelo descargado
+echo -e "\n[2] Verificando modelo..." | tee -a $LOG_FILE
+if ollama list | grep -q "$MODEL"; then
+    echo "✅ Modelo $MODEL disponible" | tee -a $LOG_FILE
+    ollama list | grep "$MODEL" | tee -a $LOG_FILE
+else
+    echo "⚠️  Modelo no encontrado, descargando..." | tee -a $LOG_FILE
+    ollama pull $MODEL
+fi
+
+# 3. Test de inferencia básica
+echo -e "\n[3] Test de inferencia básica..." | tee -a $LOG_FILE
+START_TIME=$(date +%s)
+RESPONSE=$(ollama run $MODEL "Di solo: TEST OK" 2>&1)
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+if echo "$RESPONSE" | grep -qiE "(TEST OK|ok|funciona|correcto)"; then
+    echo "✅ Inferencia exitosa (${DURATION}s)" | tee -a $LOG_FILE
+    echo "   Respuesta (primeras 200 chars): ${RESPONSE:0:200}..." | tee -a $LOG_FILE
+else
+    # Aún si no encuentra la palabra clave, verificar si hubo respuesta
+    if [[ -n "$RESPONSE" ]] && ! echo "$RESPONSE" | grep -qi "error\|timeout\|failed"; then
+        echo "⚠️  Inferencia completada (respuesta conversacional)" | tee -a $LOG_FILE
+    else
+        echo "❌ Inferencia fallida" | tee -a $LOG_FILE
+    fi
+fi
+
+# 4. Test de contexto sysadmin
+echo -e "\n[4] Test contexto sysadmin..." | tee -a $LOG_FILE
+ollama run $MODEL "Como sysadmin en Arch Linux, ¿qué comando uso para ver procesos consumiendo más RAM? Responde solo el comando." | tee -a $LOG_FILE
+
+# 5. Verificar uso de GPU
+echo -e "\n[5] Uso de GPU durante inferencia..." | tee -a $LOG_FILE
+rocm-smi --showalluse 2>/dev/null | tee -a $LOG_FILE || echo "⚠️  rocm-smi no disponible" | tee -a $LOG_FILE
+
+echo -e "\n========================================" | tee -a $LOG_FILE
+echo "TEST COMPLETADO" | tee -a $LOG_FILE
+echo "========================================" | tee -a $LOG_FILE
+
+      <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<FIN SCRIPT>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+      # Cambiamos los permisos al script y lo ejecutamos
+      chmod +x /mnt/DATOS/Agentes/fanfa/tests/test_ollama_model.sh
+      /mnt/DATOS/Agentes/fanfa/tests/test_ollama_model.sh
+
+      # Ver los resultados
+      cat /mnt/DATOS/Agentes/fanfa/logs/ollama_test_XXXXXXXXX.log
+
+      # Ver inicio del servicio para confirmar detección de GPU AMD:
+      sudo journalctl -u ollama -n 30 --no-pager | grep -iE "amd|rocm|gpu|gfx"
+
+      # Buscar específicamente la inicialización del modelo
+      # (Fíjate en la hora de ejecución):
+      sudo journalctl -u ollama -f | grep -i "loading\|gpu\|amd"
+      # (ejecuta esto en una terminal, y en otra: ollama run qwen2.5:14b "hola")
+
+      # comparto el resultado con una IA online para verificar
+✅ OFFLOADING COMPLETO A GPU:
+   offloaded 49/49 layers to GPU    ← 100% del modelo en VRAM
+
+✅ DISTRIBUCIÓN DE MEMORIA:
+   CPU model buffer:    417.66 MiB  ← Mínimo necesario (solo control)
+   ROCm0 model buffer:  8148.38 MiB ← ~8GB en tu RX 9060 XT ✅
+   KV cache (ROCm0):      768.00 MiB ← Memoria para contexto
+   Compute buffer:        349.01 MiB ← Para operaciones de inferencia
+
+✅ BACKEND CONFIRMADO:
+   ROCm0 (no CPU, no Vulkan) ← Aceleración hardware AMD nativa
+
+✅ RENDIMIENTO:
+   Startup del runner: ~3.3-3.5 segundos ← Excelente
+   Primera respuesta: ~4.2-6.0 segundos ← Normal para 14B en GPU
+   Flash Attention: enabled ← Optimización activa
+
+✅ CONTEXTO:
+   n_ctx: 4096 (sesión actual)
+   n_ctx_train: 32768 (capacidad máxima del modelo)
+   ← Puedes aumentar vía API si necesitas más contexto
+
+
+      # NOTA SOBRE EL CONTEXTO (4096 vs 32768)
+      Ollama por defecto usa num_ctx: 4096 para balancear velocidad/memoria. Si necesitas el contexto completo de Qwen2.5 (32K tokens):
+
+      # Crear Modelfile para contexto extendido
+cat > /mnt/DATOS/Agentes/fanfa/config/Modelfile.qwen14b-32k << 'EOF'
+FROM qwen2.5:14b
+
+# Contexto extendido a 32K tokens
+PARAMETER num_ctx 32768
+
+# Forzar offload completo a GPU (99 = todas las capas disponibles)
+PARAMETER num_gpu 99
+EOF
+
+      # Crear nuevo modelo derivado
+      ollama create qwen2.5:14b-32k -f /mnt/DATOS/Agentes/fanfa/config/Modelfile.qwen14b-32k
+      ollama list
+
+      # Opción A: Reiniciar el servicio (forza recarga del modelo)
+      sudo systemctl restart ollama
+
+      # Inmediatamente después, ejecutar una consulta:
+      ollama run qwen2.5:14b-32k "hola"
+
+      # Ahora sí verás los logs de carga:
+      sudo journalctl -u ollama -n 30 --no-pager | grep -iE "n_ctx|num_ctx|gpu|ROCm"
+
+      # Usar el nuevo modelo
+      ollama run qwen2.5:14b-32k "Tu pregunta larga..."
+
+
+      # Modelfile balanceado (recomendado para empezar)
+cat > /mnt/DATOS/Agentes/fanfa/config/Modelfile.qwen14b-16k << 'EOF'
+FROM qwen2.5:14b
+PARAMETER num_ctx 16384
+PARAMETER num_gpu 99
+PARAMETER main_gpu 0
+EOF
+
+      ollama create qwen2.5:14b-16k -f /mnt/DATOS/Agentes/fanfa/config/Modelfile.qwen14b-16k
+
+
 
 
 FASE 2: ESTRUCTURA DEL PROYECTO
