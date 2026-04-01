@@ -1,0 +1,99 @@
+# /mnt/DATOS/Agentes/fanfa/config/config.yaml
+# ===========================================
+# Configuración principal de FANFA
+# Se carga al inicio y se valida con pydantic
+# ===========================================
+
+app:
+  name: "FANFA"
+  version: "0.1.0"
+  description: "Asistente IA local para SysAdmin con Ollama"
+  author: "TuNombre"
+
+ollama:
+  host: "127.0.0.1:11434"
+  model: "qwen2.5:14b-16k"
+  embedding_model: "nomic-embed-text"
+  timeout: 120
+  max_retries: 3
+  retry_delay: 2
+
+memory:
+  database:
+    path: "${DATA_DIR}/fanfa.db"
+    encrypt: false
+    encryption_key_env: "DB_ENCRYPTION_KEY"
+  summarization:
+    enabled: true
+    model: "qwen2.5:14b-16k"  # Puede ser más pequeño si se desea
+    trigger: "on_action_complete"  # on_action_complete | periodic | manual
+    max_history_tokens: 2048
+
+rag:
+  vector_store:
+    provider: "chromadb"
+    path: "${DATA_DIR}/vector_store"
+    persist: true
+    collection_name: "fanfa_knowledge"
+  embeddings:
+    provider: "ollama"  # Usamos Ollama, no transformers local
+    model: "nomic-embed-text"
+    dimensions: 768
+  retrieval:
+    top_k: 5
+    min_relevance_score: 0.7
+    query_cache_enabled: true
+    query_cache_ttl: 3600  # segundos
+
+security:
+  default_permission_level: "READ_ONLY"  # READ_ONLY | WRITE | ADMIN
+  require_approval:
+    write_commands: true
+    admin_commands: true
+    file_modifications: true
+  allowed_commands_file: "${CONFIG_DIR}/allowed_commands.yaml"
+  command_validation:
+    strict_mode: true
+    block_patterns:
+      - "rm -rf /"
+      - "mkfs"
+      - "dd if="
+      - ":(){:|:&};:"
+  logging:
+    log_all_actions: true
+    log_approvals: true
+    log_rejections: true
+
+logging:
+  level: "INFO"
+  format: "structured"  # structured | text
+  output:
+    file:
+      enabled: true
+      path: "${LOGS_DIR}/fanfa.log"
+      rotation:
+        max_bytes: 10485760  # 10 MB
+        backup_count: 5
+    console:
+      enabled: true
+      colorize: true
+
+ui:
+  mode: "cli"
+  rich_theme: "monokai"
+  show_thinking: true  # Mostrar "pensando..." durante inferencia
+  confirmation_style: "interactive"  # interactive | simple
+
+backup:
+  enabled: true
+  interval_hours: 24
+  retention_days: 7
+  targets:
+    - "${DATA_DIR}/fanfa.db"
+    - "${DATA_DIR}/vector_store"
+    - "${CONFIG_DIR}/config.yaml"
+  destination: "${DATA_DIR}/backups"
+
+experimental:
+  async_execution: false  # Futuro: permitir ejecución asíncrona de herramientas
+  multi_model_support: false  # Futuro: cambiar de modelo según tarea
