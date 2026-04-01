@@ -8,7 +8,7 @@ app:
   name: "FANFA"
   version: "0.1.0"
   description: "Asistente IA local para SysAdmin con Ollama"
-  author: "TuNombre"
+  author: "Motxi"
 
 ollama:
   host: "127.0.0.1:11434"
