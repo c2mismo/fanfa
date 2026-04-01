@@ -131,12 +131,14 @@ FASE 0: PREPARACIÓN DEL ENTORNO
       #Clonamos:
       git clone "Dierccion SSH para clonar"
 
-      # Crear .gitignore CRÍTICO
-      cp ruta/archivo/gitignore .gitignore
-
       # Commit inicial
       git add .
       git commit -m "Initial commit: Project structure for Fanfa SysAdmin Assistant"
+
+      # Crear .gitignore CRÍTICO
+      cp ruta/archivo/gitignore .gitignore
+      git add .gitignore
+      git commit -m "chore: Añadir .gitignore para datos sensibles y artefactos"
       git status
       git log --oneline
 
@@ -356,7 +358,7 @@ EOF
 
 
       # Modelfile balanceado (recomendado para empezar)
-cat > /mnt/DATOS/Agentes/fanfa/config/Modelfile.qwen14b-16k << 'EOF'
+      cat > /mnt/DATOS/Agentes/fanfa/config/Modelfile.qwen14b-16k << 'EOF'
 FROM qwen2.5:14b
 PARAMETER num_ctx 16384
 PARAMETER num_gpu 99
@@ -373,25 +375,446 @@ FASE 2: ESTRUCTURA DEL PROYECTO
 [2.1] Crear árbol de directorios
       - Objetivo: Organización del código
       - Estructura:
-        /agent
-        ├── /core          (lógica principal del asistente)
-        ├── /memory        (gestión de memoria)
-        ├── /rag           (recuperación de conocimiento)
-        ├── /tools         (herramientas/skills)
-        ├── /security      (permisos y validación)
-        ├── /config        (configuraciones)
-        ├── /logs          (registros de actividad)
-        └── /data          (memoria persistente)
+      /mnt/DATOS/Agentes/fanfa/
+      ├── .venv/                      # Entorno virtual (en .gitignore)
+      ├── .git/
+      ├── .gitignore
+      ├── README.md
+      ├── requirements.txt
+      ├── pyproject.toml             # [Opcional] Para gestión moderna con pip/poetry
+      ├── config/
+      │   ├── __init__.py
+      │   ├── config.yaml            # Configuración estructurada
+      │   ├── .env.example           # Plantilla de variables sensibles
+      │   ├── system_prompt.txt      # Prompt base del asistente
+      │   └── allowed_commands.yaml  # Whitelist de comandos
+      ├── core/
+      │   ├── __init__.py
+      │   ├── agent_loop.py          # Ciclo principal del agente
+      │   ├── llm_interface.py       # Comunicación con Ollama
+      │   └── error_handler.py       # Manejo de errores y reintentos
+      ├── memory/
+      │   ├── __init__.py
+      │   ├── persistent_memory.py   # CRUD SQLite
+      │   ├── summarizer.py          # Resúmenes automáticos
+      │   └── encryption.py          # [Opcional] Cifrado de datos sensibles
+      ├── rag/
+      │   ├── __init__.py
+      │   ├── document_ingestor.py   # Pipeline de ingestión
+      │   ├── retriever.py           # Búsqueda semántica
+      │   ├── query_cache.py         # Caché de consultas
+      │   └── embeddings.py          # Gestión de embeddings via Ollama
+      ├── tools/
+      │   ├── __init__.py
+      │   ├── command_executor.py    # Wrappers seguros para comandos
+      │   ├── config_reader.py       # Lector de /etc/* (solo lectura)
+      │   ├── system_info.py         # Recopilación de info del sistema
+      │   └── file_utils.py          # Utilidades de archivo seguras
+      ├── security/
+      │   ├── __init__.py
+      │   ├── permission_levels.py   # READ_ONLY, WRITE, ADMIN
+      │   ├── command_validator.py   # Validador de comandos
+      │   ├── approval_system.py     # Sistema de confirmación humana
+      │   └── alert_system.py        # Alertas para acciones críticas
+      ├── ui/
+      │   ├── __init__.py
+      │   ├── cli_interface.py       # Interfaz CLI principal
+      │   ├── approval_interface.py  # Interfaz de aprobación
+      │   └── emergency_stop.py      # Sistema de aborto de emergencia
+      ├── logs/
+      │   ├── .gitkeep
+      │   └── README.md              # Política de rotación y retención
+      ├── data/
+      │   ├── .gitkeep
+      │   ├── fanfa.db               # SQLite (NO commitear en git)
+      │   ├── vector_store/          # ChromaDB local (NO commitear)
+      │   ├── user_configs/          # Configs específicas del usuario
+      │   └── backups/               # Backups automáticos
+      ├── tests/
+      │   ├── __init__.py
+      │   ├── conftest.py            # Fixtures de pytest
+      │   ├── unit/
+      │   ├── integration/
+      │   ├── security/
+      │   └── test_ollama_model.sh   # Tu script de Fase 1
+      └── scripts/
+      ├── start_agent.sh         # Script de lanzamiento
+      ├── backup_memory.sh       # Backup de memoria y config
+      └── update_model.sh        # Actualización segura de modelos
+
+
+
+
+      # Modelfile balanceado (recomendado para empezar)
+cat > /mnt/DATOS/Agentes/scripts/make_structure.sh << 'EOF'
+cd /mnt/DATOS/Agentes/fanfa
+
+# Crear directorios con __init__.py para módulos Python
+for dir in core memory rag tools security ui tests/unit tests/integration tests/security scripts; do
+    mkdir -p "$dir"
+    touch "$dir/__init__.py"
+done
+
+# Archivos .gitkeep para directorios que deben existir pero estar vacíos
+touch logs/.gitkeep
+touch data/.gitkeep
+mkdir -p data/vector_store
+touch data/vector_store/.gitkeep
+touch data/user_configs/.gitkeep
+touch data/backups/.gitkeep
+echo "# ChromaDB vector store - auto-generated, no commitear contenido" > data/vector_store/.gitkeep
+
+# Archivos base vacíos (los rellenaremos a continuación)
+touch config/{config.yaml,.env.example,system_prompt.txt,allowed_commands.yaml}
+touch core/{agent_loop.py,llm_interface.py,error_handler.py}
+touch memory/{persistent_memory.py,summarizer.py,encryption.py}
+touch rag/{document_ingestor.py,retriever.py,query_cache.py,embeddings.py}
+touch tools/{command_executor.py,config_reader.py,system_info.py,file_utils.py}
+touch security/{permission_levels.py,command_validator.py,approval_system.py,alert_system.py}
+touch ui/{cli_interface.py,approval_interface.py,emergency_stop.py}
+touch scripts/{start_agent.sh,backup_memory.sh,update_model.sh}
+
+# Hacer ejecutables los scripts bash
+chmod +x scripts/*.sh tests/*.sh
+EOF
+
+
+      # Ejecutamos el script
+      chmod +x /mnt/DATOS/Agentes/scripts/make_structure.sh
+      ./mnt/DATOS/Agentes/scripts/make_structure.sh
+
+      git add -f data/.gitkeep logs/.gitkeep
+
+      # Verificar que todos los .gitkeep existen
+      find /mnt/DATOS/Agentes/fanfa -name ".gitkeep" -type f
+      # Verificar que git los reconoce
+      git status --porcelain | grep ".gitkeep"
+      # Deberías ver algo como:
+      # ?? logs/.gitkeep
+      # ?? data/.gitkeep
+      # ?? data/vector_store/.gitkeep
+      # ?? data/user_configs/.gitkeep
+      # ?? data/backups/.gitkeep
+
+
+      git commit -m "feat: Fase 2.1 - Estructura completa de directorios y módulos base"
+
+
+
+
+
 
 [2.2] Crear archivo de requisitos
       - Objetivo: Documentar dependencias Python
       - Archivo: requirements.txt
       - Problemas esperados: Conflictos de versiones
 
+      cat > /mnt/DATOS/Agentes/fanfa/requirements.txt << 'EOF'
+# ==========================================
+# FANFA - Dependencies for SysAdmin AI Assistant
+# Python 3.14+ | Arch Linux | AMD ROCm | Ollama
+# ==========================================
+
+# === CORE: Comunicación con Ollama ===
+ollama>=0.4.0,<0.5.0          # Cliente oficial de Ollama
+
+# === CONFIGURACIÓN ===
+pyyaml>=6.0.2                 # Para config.yaml
+python-dotenv>=1.0.1          # Para variables de entorno (.env)
+
+# === BASE DE DATOS ===
+# sqlite3 está incluido en Python, pero añadimos ORM para escalabilidad
+sqlalchemy>=2.0.25            # ORM para SQLite (opcional pero recomendado)
+aiosqlite>=0.20.0             # SQLite asíncrono (para futuro async)
+
+# === RAG: Vector Database y Embeddings ===
+chromadb>=0.4.22              # Vector DB local (más ligero que Qdrant para empezar)
+# NOTA: Usaremos Ollama para embeddings (nomic-embed-text), no transformers local
+
+# === UTILIDADES DE SISTEMA ===
+psutil>=5.9.8                 # Información de sistema (CPU, RAM, disco)
+shutilwhich>=1.1.0            # Verificación segura de comandos disponibles
+pathlib>=1.0.1                # Manejo moderno de rutas (ya en stdlib 3.4+, pero por claridad)
+
+# === LOGGING Y OBSERVABILIDAD ===
+# logging está en stdlib, pero structlog mejora la estructura
+structlog>=24.1.0             # Logging estructurado para mejor auditoría
+
+# === SEGURIDAD ===
+cryptography>=42.0.0          # Para cifrado de memoria sensible
+bcrypt>=4.1.2                 # Para hashing de claves si se necesita
+
+# === INTERFAZ DE USUARIO (CLI/TUI) ===
+rich>=13.7.0                  # CLI con colores y formato bonito
+textual>=0.48.0               # [Opcional] Para TUI avanzada en futuro
+
+# === TESTING ===
+pytest>=8.0.0                 # Framework de testing
+pytest-cov>=4.1.0             # Cobertura de tests
+pytest-asyncio>=0.23.5        # Para tests asíncronos
+
+# === UTILIDADES ADICIONALES ===
+tenacity>=8.2.3               # Reintentos con backoff exponencial (para resiliencia)
+pydantic>=2.6.0               # Validación de datos y configuración tipada
+
+# === NOTAS IMPORTANTES ===
+# 1. NO incluir torch/tensorflow: usamos Ollama para inferencia
+# 2. NO incluir transformers pesado: embeddings via Ollama API
+# 3. Todas las versiones son mínimas; ajustar tras testing en tu hardware
+# 4. Para AMD ROCm: las dependencias de GPU las maneja Ollama externamente
+EOF
+
+      # Verificar que requirements.txt es válido. Simula instalación sin cambiar nada
+      fanfa-activate
+      pip install --dry-run -r requirements.txt
+
+      git add requirements.txt
+      git commit -m "Archivo de requisitos creado"
+
+      # Instalación segura en tu venv:
+      # Activar entorno
+      fanfa-activate
+
+      # Instalar dependencias (con verificación de hashes si quieres máxima seguridad)
+      pip install -r requirements.txt
+
+      # Verificar instalación
+      pip list | grep -E "(ollama|chromadb|SQLAlchemy|rich)"
+
+      # [Opcional] Generar requirements.lock con hashes para reproducibilidad
+      pip freeze > requirements.lock
+
+      git add requirements.lock
+      git commit -m "Generado requirements.lock con hashes para reproducibilidad"
+
 [2.3] Crear archivo de configuración base
       - Objetivo: Centralizar variables (paths, modelos, permisos)
       - Archivo: config.yaml o .env
       - Problemas esperados: Variables de entorno no cargan
+
+
+
+      # Archivos de Configuración Base
+
+      # config/.env.example (Variables sensibles - NO commitear el .env real)
+      cat > /mnt/DATOS/Agentes/fanfa/config/.env.example << 'EOF'
+# /mnt/DATOS/Agentes/fanfa/config/.env.example
+# ===========================================
+# Copiar a .env y ajustar valores. NUNCA commitear .env en git.
+# ===========================================
+
+# === OLLAMA ===
+OLLAMA_HOST=127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:14b-16k
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_TIMEOUT=120
+
+# === RUTA DEL PROYECTO ===
+PROJECT_ROOT=/mnt/DATOS/Agentes/fanfa
+DATA_DIR=${PROJECT_ROOT}/data
+LOGS_DIR=${PROJECT_ROOT}/logs
+CONFIG_DIR=${PROJECT_ROOT}/config
+
+# === BASE DE DATOS ===
+DB_PATH=${DATA_DIR}/fanfa.db
+DB_ENCRYPT=false  # Cambiar a true si se activa cifrado
+DB_ENCRYPTION_KEY=  # Dejar vacío; se generará si DB_ENCRYPT=true
+
+# === VECTOR STORE (ChromaDB) ===
+VECTOR_STORE_PATH=${DATA_DIR}/vector_store
+VECTOR_STORE_PERSIST=true
+
+# === SEGURIDAD ===
+DEFAULT_PERMISSION_LEVEL=READ_ONLY  # READ_ONLY | WRITE | ADMIN
+REQUIRE_APPROVAL_FOR_WRITE=true
+REQUIRE_APPROVAL_FOR_ADMIN=true
+LOG_ALL_ACTIONS=true
+
+# === LOGGING ===
+LOG_LEVEL=INFO  # DEBUG | INFO | WARNING | ERROR | CRITICAL
+LOG_ROTATION_MAX_BYTES=10485760  # 10 MB
+LOG_ROTATION_BACKUP_COUNT=5
+
+# === UI ===
+UI_MODE=cli  # cli | tui | web (futuro)
+COLOR_OUTPUT=true
+
+# === BACKUP ===
+BACKUP_ENABLED=true
+BACKUP_INTERVAL_HOURS=24
+BACKUP_RETENTION_DAYS=7
+EOF
+
+      # config/config.yaml (Configuración estructurada)
+      cat > /mnt/DATOS/Agentes/fanfa/config/config.yaml << 'EOF'
+# /mnt/DATOS/Agentes/fanfa/config/config.yaml
+# ===========================================
+# Configuración principal de FANFA
+# Se carga al inicio y se valida con pydantic
+# ===========================================
+
+app:
+  name: "FANFA"
+  version: "0.1.0"
+  description: "Asistente IA local para SysAdmin con Ollama"
+  author: "TuNombre"
+
+ollama:
+  host: "127.0.0.1:11434"
+  model: "qwen2.5:14b-16k"
+  embedding_model: "nomic-embed-text"
+  timeout: 120
+  max_retries: 3
+  retry_delay: 2
+
+memory:
+  database:
+    path: "${DATA_DIR}/fanfa.db"
+    encrypt: false
+    encryption_key_env: "DB_ENCRYPTION_KEY"
+  summarization:
+    enabled: true
+    model: "qwen2.5:14b-16k"  # Puede ser más pequeño si se desea
+    trigger: "on_action_complete"  # on_action_complete | periodic | manual
+    max_history_tokens: 2048
+
+rag:
+  vector_store:
+    provider: "chromadb"
+    path: "${DATA_DIR}/vector_store"
+    persist: true
+    collection_name: "fanfa_knowledge"
+  embeddings:
+    provider: "ollama"  # Usamos Ollama, no transformers local
+    model: "nomic-embed-text"
+    dimensions: 768
+  retrieval:
+    top_k: 5
+    min_relevance_score: 0.7
+    query_cache_enabled: true
+    query_cache_ttl: 3600  # segundos
+
+security:
+  default_permission_level: "READ_ONLY"  # READ_ONLY | WRITE | ADMIN
+  require_approval:
+    write_commands: true
+    admin_commands: true
+    file_modifications: true
+  allowed_commands_file: "${CONFIG_DIR}/allowed_commands.yaml"
+  command_validation:
+    strict_mode: true
+    block_patterns:
+      - "rm -rf /"
+      - "mkfs"
+      - "dd if="
+      - ":(){:|:&};:"
+  logging:
+    log_all_actions: true
+    log_approvals: true
+    log_rejections: true
+
+logging:
+  level: "INFO"
+  format: "structured"  # structured | text
+  output:
+    file:
+      enabled: true
+      path: "${LOGS_DIR}/fanfa.log"
+      rotation:
+        max_bytes: 10485760  # 10 MB
+        backup_count: 5
+    console:
+      enabled: true
+      colorize: true
+
+ui:
+  mode: "cli"
+  rich_theme: "monokai"
+  show_thinking: true  # Mostrar "pensando..." durante inferencia
+  confirmation_style: "interactive"  # interactive | simple
+
+backup:
+  enabled: true
+  interval_hours: 24
+  retention_days: 7
+  targets:
+    - "${DATA_DIR}/fanfa.db"
+    - "${DATA_DIR}/vector_store"
+    - "${CONFIG_DIR}/config.yaml"
+  destination: "${DATA_DIR}/backups"
+
+experimental:
+  async_execution: false  # Futuro: permitir ejecución asíncrona de herramientas
+  multi_model_support: false  # Futuro: cambiar de modelo según tarea
+EOF
+
+      # Verificar que config.yaml es YAML válido
+      fanfa-activate
+      python -c "import yaml; yaml.safe_load(open('config/config.yaml'))" && echo "✅ config.yaml válido"
+
+      git add config/config.yaml
+      git commit -m "Añadida la configuración estructurada"
+
+      # config/system_prompt.txt (Prompt base del asistente)
+      cat > /mnt/DATOS/Agentes/fanfa/config/system_prompt.txt << 'EOF'
+# /mnt/DATOS/Agentes/fanfa/config/system_prompt.txt
+# ================================================
+# Prompt del sistema para FANFA - Asistente SysAdmin
+# ================================================
+
+Eres FANFA, un asistente de inteligencia artificial local diseñado para apoyar a administradores de sistemas en Arch Linux.
+
+## TU ROL:
+- Eres un consultor técnico, NO un ejecutor autónomo.
+- Tu función es: analizar, sugerir, documentar y explicar — NUNCA decidir por el usuario.
+- Siempre priorizas la seguridad, la estabilidad del sistema y la reversibilidad de las acciones.
+
+## REGLAS DE COMPORTAMIENTO:
+1. NUNCA ejecutes comandos sin aprobación explícita del usuario.
+2. Para comandos de escritura (WRITE) o administración (ADMIN), requiere confirmación con "si | ok" explícito.
+3. Si una consulta es ambigua, pide clarificación antes de proceder.
+4. Cita fuentes cuando uses información de documentación (man pages, Arch Wiki, repositorios oficiales, etc.).
+5. Si no estás seguro de algo, dilo. Es mejor ser honesto que arriesgar el sistema.
+
+## FORMATO DE RESPUESTA:
+- Sé conciso pero completo.
+- Para sugerencias de comandos, usa bloques de código con bash.
+- Incluye una breve explicación de QUÉ hace el comando y POR QUÉ es seguro/recomendado.
+- Si el comando es potencialmente riesgoso, añade una advertencia clara.
+
+## CONTEXTO DEL USUARIO:
+- Sistema: Arch Linux x86_64, kernel Zen
+- Hardware: AMD Ryzen 5 9600X, AMD Radeon RX 9060 XT 16GB, 16GB RAM
+- Shell: bash/zsh (detectar dinámicamente)
+- Preferencias: Scripts automatizados, documentación clara, seguridad primero
+
+## EJEMPLO DE INTERACCIÓN:
+Usuario: "¿Cómo veo el uso de disco en btrfs?"
+Tú:
+```bash
+# Comando seguro de solo lectura para ver uso de disco en btrfs:
+btrfs filesystem usage /
+
+# Alternativa con formato más legible:
+btrfs filesystem df -h /
+
+# Nota: Ambos comandos son READ_ONLY y no modifican el sistema.
+
+## RECORDATORIO FINAL:
+El administrador eres TÚ (el usuario humano). Yo soy tu herramienta.
+Tú tienes el criterio final. Yo proporciono información y sugerencias.
+Y no olvides si no estás seguro de algo, dilo.
+La confianza es la base de una buena relación <3.
+EOF
+
+
+
+      git add config/system_prompt.txt
+      git commit -m "Add prompt base del asistente"
+
+
+      git add roadmap
+      git commit -m "feat: Fase 2.2-2.3 - requirements.txt y configuración base"
 
 
 FASE 3: CAPA DE MEMORIA PERSISTENTE
