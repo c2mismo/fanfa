@@ -199,7 +199,23 @@ FASE 1: INSTALACIÓN DE OLLAMA
       - Modelos: qwen2.5 (14B), nomic-embed-text (embeddings)
       - Problemas esperados: Descarga lenta, disco lleno
       ollama pull qwen2.5:14b
+      ollama pull nomic-embed-text
       ollama list
+
+      # Test básico de embeddings (debe devolver vectores, no texto conversacional)
+      cat > /mnt/DATOS/Agentes/fanfa//tests/check_embeddings_enomic.sh << 'EOF'
+curl http://localhost:11434/api/embeddings -d '{
+  "model": "nomic-embed-text",
+  "prompt": "Texto de prueba para verificar embeddings"
+}' | jq '.embedding | length'
+EOF
+
+      chmod +x /mnt/DATOS/Agentes/fanfa//tests/check_embeddings_enomic.sh
+      /mnt/DATOS/Agentes/fanfa//tests/check_embeddings_enomic.sh
+      # Debería devolver: 768 (dimensiones del embedding)
+
+      # Podemos eliminarlo si es correcto
+      rm /mnt/DATOS/Agentes/fanfa//tests/check_embeddings_enomic.sh
 
 
 [1.5] Verificar modelo base
@@ -211,8 +227,11 @@ Usuario: ¿Qué comando uso para ver el uso de disco en btrfs?
 Asistente:
 EOF
 
+      #
       Script de Test Completo
       nano /mnt/DATOS/Agentes/fanfa/tests/test_ollama_model.sh
+
+
 
       <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<INICIO SCRIPT>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -587,6 +606,9 @@ EOF
       git add requirements.lock
       git commit -m "Generado requirements.lock con hashes para reproducibilidad"
 
+
+
+
 [2.3] Crear archivo de configuración base
       - Objetivo: Centralizar variables (paths, modelos, permisos)
       - Archivo: config.yaml o .env
@@ -834,7 +856,7 @@ FASE 3: CAPA DE MEMORIA PERSISTENTE
       - Archivo: /memory/persistent_memory.py
       - Problemas esperados: Concurrencia, corrupción de datos
 
-[3.4] Implementar cifrado de memoria (opcional)
+[3.4] Implementar cifrado de memoria
       - Objetivo: Proteger datos sensibles
       - Librería: cryptography o sqlcipher
       - Problemas esperados: Gestión de claves
